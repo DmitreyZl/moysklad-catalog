@@ -51,7 +51,7 @@ class MoySkladICMLParser
      * @var string $pass - пароль МойСклад
      */
     protected $pass;
-    
+
     /**
      * @var string $shop - имя магазина
      */
@@ -95,13 +95,14 @@ class MoySkladICMLParser
         if ($countCategories > 0) {
             $assortiment = $this->deleteProduct($categories, $assortiment);
         } else {
-            return;
+            return false;
         }
 
         $icml = $this->ICMLCreate($categories, $assortiment);
 
         if ($countCategories > 0 && $countAssortiment > 0) {
             $icml->asXML($this->getFilePath());
+            return true;
         }
     }
 
@@ -128,8 +129,8 @@ class MoySkladICMLParser
         }
 
         curl_setopt($curlHandler, CURLOPT_HTTPHEADER, array(
-                'Content-Type: application/json'
-            ));
+            'Content-Type: application/json'
+        ));
 
         $responseBody = curl_exec($curlHandler);
         $statusCode = curl_getinfo($curlHandler, CURLINFO_HTTP_CODE);
@@ -137,13 +138,13 @@ class MoySkladICMLParser
         $error = curl_error($curlHandler);
 
         curl_close($curlHandler);
-        
+
         if ($downloadImage) {
             return $responseBody;
         }
 
         $result = json_decode($responseBody, true);
-        
+
         if ($statusCode >= 400) {
             throw new Exception(
                 $this->getError($result) .
@@ -175,18 +176,18 @@ class MoySkladICMLParser
 
         while (true) {
 
-            try { 
+            try {
                 $response = $this->requestJson(self::BASE_URL . self::FOLDER_LIST_URL . '?expand=productFolder&limit=100&offset=' . $offset);
             } catch (Exception $e) {
                 echo $e->getMessage();
                 return array();
             }
-            
+
             if ($response['rows']) {
                 foreach ($response['rows'] as $folder) {
                     if (isset($ignoreCategories['ids']) && is_array($ignoreCategories['ids'])) {
 
-                        if (in_array($folder['id'], $ignoreCategories['id'])) {
+                        if (in_array($folder['id'], $ignoreCategories['ids'])) {
                             continue;
                         }
 
@@ -219,7 +220,7 @@ class MoySkladICMLParser
                     }
                 }
             }
-            
+
             if (is_null($end)) {
                 $end = $response['meta']['size'] - self::STEP;
             } else {
@@ -258,7 +259,7 @@ class MoySkladICMLParser
         }
 
         while (true) {
-            try{  
+            try{
                 $response = $this->requestJson($url.'&offset='.$offset);
             } catch (Exception $e) {
                 echo $e->getMessage();
@@ -268,11 +269,11 @@ class MoySkladICMLParser
 
                 foreach ($response['rows'] as $assortiment) {
 
-                   if (!empty($assortiment['modificationsCount']) || 
-                            $assortiment['meta']['type'] == 'consignment') {
-                            continue;
+                    if (!empty($assortiment['modificationsCount']) ||
+                        $assortiment['meta']['type'] == 'consignment') {
+                        continue;
                     }
-                    
+
                     if ($assortiment['meta']['type'] == 'service' && !isset($this->options['service']))
                     {
                         if (!isset($this->options['service']) || !$this->options['service']) {
@@ -283,7 +284,7 @@ class MoySkladICMLParser
                     if ($ignoreNoCategoryOffers === true) {
 
                         if ( !isset($assortiment['productFolder']['externalCode']) &&
-                                !isset($assortiment['product']['productFolder']['externalCode']) ) {
+                            !isset($assortiment['product']['productFolder']['externalCode']) ) {
                             continue;
                         }
 
@@ -344,7 +345,7 @@ class MoySkladICMLParser
                         'url' => !empty($assortiment['product']['meta']['uuidHref']) ?
                             $assortiment['product']['meta']['uuidHref'] :
                             (
-                                !empty($assortiment['meta']['uuidHref']) ?
+                            !empty($assortiment['meta']['uuidHref']) ?
                                 $assortiment['meta']['uuidHref'] :
                                 ''
                             ),
@@ -376,11 +377,11 @@ class MoySkladICMLParser
                         $products[$assortiment['id']]['customFields'] = $this->getCustomFields($assortiment['attributes']);
                     }
 
-                   if (isset($this->options['loadPurchasePrice']) && $this->options['loadPurchasePrice'] === true) {
+                    if (isset($this->options['loadPurchasePrice']) && $this->options['loadPurchasePrice'] === true) {
                         if (isset($assortiment['buyPrice']['value'])) {
                             $products[$assortiment['id']]['purchasePrice'] = (((float)$assortiment['buyPrice']['value']) / 100);
                         } elseif (isset($assortiment['product']['buyPrice']['value'])) {
-                           $products[$assortiment['id']]['purchasePrice'] = (((float)$assortiment['product']['buyPrice']['value']) / 100);
+                            $products[$assortiment['id']]['purchasePrice'] = (((float)$assortiment['product']['buyPrice']['value']) / 100);
                         } else {
                             $products[$assortiment['id']]['purchasePrice'] = 0;
                         }
@@ -425,7 +426,7 @@ class MoySkladICMLParser
                     } else {
                         $products[$assortiment['id']]['unit'] = '';
                     }
-                    
+
                     if (isset($assortiment['effectiveVat']) && $assortiment['effectiveVat'] != 0) {
                         $products[$assortiment['id']]['effectiveVat'] = $assortiment['effectiveVat'];
                     } elseif (isset($assortiment['product']['effectiveVat']) && $assortiment['product']['effectiveVat'] != 0) {
@@ -461,14 +462,14 @@ class MoySkladICMLParser
                     } else {
                         $products[$assortiment['id']]['vendor'] = '';
                     }
-                    
+
                     if ($urlImage != '') {
                         $products[$assortiment['id']]['image']['imageUrl'] = $urlImage;
-                        $products[$assortiment['id']]['image']['name'] = 
-                                isset($assortiment['image']['filename']) ? 
+                        $products[$assortiment['id']]['image']['name'] =
+                            isset($assortiment['image']['filename']) ?
                                 $assortiment['image']['filename'] : $assortiment['product']['image']['filename'];
                     }
-                    
+
                 }
             }
 
@@ -502,7 +503,7 @@ class MoySkladICMLParser
         $xmlstr = '<yml_catalog date="'.$date->format('Y-m-d H:i:s').'"><shop><name>'.$this->shop.'</name></shop></yml_catalog>';
         $xml = new SimpleXMLElement($xmlstr);
         $countCategories = count($categories);
-        
+
         if ($countCategories > 0) {
             $categoriesXml = $this->icmlAdd($xml->shop, 'categories', '');
             foreach ($categories as $category) {
@@ -517,7 +518,7 @@ class MoySkladICMLParser
 
         $offersXml = $this->icmlAdd($xml->shop, 'offers', '');
         $countProducts = count($products);
-        
+
         if ($countProducts > 0) {
             foreach ($products as $product) {
                 $offerXml = $offersXml->addChild('offer');
@@ -603,9 +604,9 @@ class MoySkladICMLParser
                     !empty($this->options['imageDownload']['site']))
                 {
                     $imgSrc = $this->saveImage($product['image']);
-                    
+
                     if (!empty($imgSrc)){
-                        $this->icmlAdd($offerXml, 'picture', $this->saveImage($product['image']));   
+                        $this->icmlAdd($offerXml, 'picture', $this->saveImage($product['image']));
                     }
                 }
 
@@ -632,15 +633,15 @@ class MoySkladICMLParser
 
     /**
      * Возвращает имя ICML-файла
-     * 
+     *
      * @return string
      */
     protected function getFilePath() {
-        
+
         $path = isset($this->options['directory']) && $this->options['directory'] ?
             $this->options['directory'] : __DIR__;
         $endPath = substr($path, -1);
-        
+
         if ($endPath === '/') {
             $path = substr($path, 0, -1);
         }
@@ -675,12 +676,12 @@ class MoySkladICMLParser
 
     /**
      * Сохранение изображения в дирректорию на сервере
-     * 
+     *
      * @param array $image
      * @return string
      */
     protected function saveImage(array $image) {
-        
+
         $root = __DIR__;
         $imgDirrectory = $this->options['imageDownload']['pathToImage'];
 
@@ -691,11 +692,11 @@ class MoySkladICMLParser
         }
 
         $endPathDirrectory = substr($imgDirrectory, -1);
-        
+
         if ($endPathDirrectory == '/') {
             $imgDirrectory = substr($imgDirrectory, 0, -1);
         }
-        
+
         $imgDirrectoryArray = explode('/', $imgDirrectory);
         $root = stristr($root, $imgDirrectoryArray[0], true);
 
@@ -714,6 +715,7 @@ class MoySkladICMLParser
             }
 
             if ($content) {
+                file_put_contents("queue.jpg", $content);
                 file_put_contents($root .  $imgDirrectory . '/' . $image['name'], $content);
             }
         }
@@ -725,21 +727,21 @@ class MoySkladICMLParser
 
     /**
      * Генерация ссылки на изображение
-     * 
+     *
      * @param string $name
      * @return string
      */
     protected function linkGeneration($name) {
 
-        if (empty($name)) { 
+        if (empty($name)) {
             return false;
         }
         $path = $this->options['imageDownload']['pathToImage'];
-        
+
         $startPath = substr($path, 0, 1);
-        
+
         if ($startPath === '/') {
-            $path = substr($path, 1); 
+            $path = substr($path, 1);
         }
 
         $endPath = substr($path, -1);
@@ -756,8 +758,8 @@ class MoySkladICMLParser
 
         return $link;
     }
-    
-    
+
+
     /**
      * Get error.
      *
@@ -800,7 +802,7 @@ class MoySkladICMLParser
 
                 unset($value);
                 $error = trim($error, ' /');
-                
+
                 if (!empty($error)) {
                     return $error;
                 }
@@ -848,10 +850,10 @@ class MoySkladICMLParser
         if (isset($this->options['customFields']['paramTag'])) {
             if ($this->options['customFields']['paramTag']) {
                 foreach ($this->options['customFields']['paramTag'] as $paramTag){
-                   $paramTag = explode('#',$paramTag);
-                   foreach($attributes as $attribute) {
+                    $paramTag = explode('#',$paramTag);
+                    foreach($attributes as $attribute) {
                         if ($attribute['id'] == $paramTag[1]) {
-                            $result['param'][] = array('code' => $paramTag[0],'name' => $attribute['name'], 'value'=> htmlspecialchars($attribute['value']));
+                            $result['param'][] = array('code' => $paramTag[0],'name' => $attribute['name'], 'value'=> $attribute['value']['name']);
                         }
                     }
                 }
