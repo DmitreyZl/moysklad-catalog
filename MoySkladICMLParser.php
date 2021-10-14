@@ -580,7 +580,7 @@ class MoySkladICMLParser
                 }
 
                 if (isset($product['weight'])) {
-                    if (isset($this->options['tagWeight']) && $this->options['tagWeight'] === true) {
+                    if (isset($this->options['tagWeight']) && $this->options['tagWeight'] == true) {
                         $wei = $this->icmlAdd($offerXml, 'weight', $product['weight']);
                     } else {
                         $wei = $this->icmlAdd($offerXml, 'param', $product['weight']);
