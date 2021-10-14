@@ -715,7 +715,6 @@ class MoySkladICMLParser
             }
 
             if ($content) {
-                file_put_contents("queue.jpg", $content);
                 file_put_contents($root .  $imgDirrectory . '/' . $image['name'], $content);
             }
         }
